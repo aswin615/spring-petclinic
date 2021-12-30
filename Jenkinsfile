@@ -13,29 +13,27 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/aswin615/spring-petclinic.git'
             }
         }
-        stage('Maven-clean'){
+        stage('Maven'){
             steps {
-                sh "mvn -Dmaven.test.failure.ignore=true clean"
+                sh "mvn -Dmaven.test.failure.ignore=true clean validate compile test package"
             }
         }
-        stage('Maven-Vaidate'){
-            steps('validate') {
-                sh "mvn validate"
+        stage('Docker Build'){
+            steps {
+                sh 'docker build -t aswin615/spring-petclinic .'
             }
         }
-        stage('Maven-Compile'){
-            steps('compile') {
-                sh "mvn compile"
+        stage('Docker push'){
+            steps{
+                withCredentials([usernamePassword(credentialsId: 'dockerHub', passwordVariable: 'dockerHubPass', usernameVariable: 'dockerHubUser')]) {
+                    sh 'docker login -u ${dockerHubUser} -p ${dockerHubPass}'
+                    sh 'docker push aswin615/spring-petclinic'
+                }
             }
         }
-        stage('Maven-test'){
-            steps('test') {
-                sh "mvn test"
-            }
-        }
-        stage('Maven-Package'){
-            steps('Package') {
-                sh "mvn package"
+        stage('Docker run'){
+            steps{
+                sh 'docker run -d --name petclinic -p 8090:8080 aswin615/spring-petclinic'
             }
             post {
                     // If Maven was able to run the tests, even if some of the test
